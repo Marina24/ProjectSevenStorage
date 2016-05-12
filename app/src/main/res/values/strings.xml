@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Storage</string>
+    <string name="text_btn_create">Create File</string>
+    <string name="text_btn_open">Open Directory</string>
+    <string name="txt_save">Save</string>
+    <string name="files_counts">Documents</string>
+    <string name="file">File</string>
+</resources>
