@@ -1,9 +1,12 @@
 package com.example.user.projectsevenstorage.ui;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Environment;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,9 +16,6 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.user.projectsevenstorage.R;
-
-import java.io.File;
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -38,15 +38,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBtnCreateFile.setOnClickListener(this);
         mBtnContentDir.setOnClickListener(this);
 
-        createDirectory();
-        openLastFile();
+        if (isStoragePermissionGranted()) {
+            FileManager.createDirectory();
+            openLastFile();
+        }
     }
 
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_external_storage:
+                if (FileManager.isExternalStorageReadable()) {
+                    FileManager.saveFileToExternalStorage(mEditTextName.getText().toString());
+                    Toast.makeText(this, "Create file " + mEditTextName.getText().toString(), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case R.id.btn_content:
+                Intent intent = new Intent(MainActivity.this, ViewContentActivity.class);
+                startActivity(intent);
+                Toast.makeText(this, "Directory save_files", Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                break;
+        }
+    }
 
+    // Open last editable file
     private void openLastFile() {
         mSp = getSharedPreferences(FIRSTOPEN, Context.MODE_PRIVATE);
-        if (countFiles().length == 0) {
-            Log.d(LOG_TAG, String.valueOf(countFiles().length));
+        if (FileManager.getContentDirectory().length == 0) {
+            Log.d(LOG_TAG, String.valueOf(FileManager.getContentDirectory().length));
             SharedPreferences.Editor editor = mSp.edit();
             editor.putBoolean("hasVisited", false);
             editor.commit();
@@ -61,75 +82,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private File[] countFiles() {
-        String path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString() +
-                "/save_files";
-        Log.d("Files", "Path: " + path);
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        return files;
+    // Checking if the user has granted permission of external storage
+    public boolean isStoragePermissionGranted() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                Log.v(FileManager.LOG_TAG, "Permission is granted");
+                return true;
+            } else {
+                Log.v(FileManager.LOG_TAG, "Permission is revoked");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                return false;
+            }
+        } else { //permission is automatically granted on sdk<23 upon installation
+            Log.v(FileManager.LOG_TAG, "Permission is automatically granted");
+            return true;
+        }
     }
 
     @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.btn_external_storage:
-                isExternalStorageReadable();
-                saveFileToExternalStorage();
-                Toast.makeText(this, "Create file " + mEditTextName.getText().toString(), Toast.LENGTH_SHORT).show();
-                break;
-            case R.id.btn_content:
-                getContentDirectory();
-                Toast.makeText(this, "Directory save_files", Toast.LENGTH_SHORT).show();
-                break;
-            default:
-                break;
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Permission Granted
+            Log.v(FileManager.LOG_TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+            //resume tasks needing this permission
+            FileManager.createDirectory();
+            openLastFile();
+        } else {
+            // Permission Denied
+            Toast.makeText(MainActivity.this, "Write to External Storage is denied", Toast.LENGTH_SHORT)
+                    .show();
         }
-    }
-
-    public boolean isExternalStorageReadable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            Log.d(LOG_TAG, "Yes, can write to external storage.");
-            return true;
-        }
-        return false;
-    }
-
-    private boolean createDirectory() {
-        String root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString();
-        File myDir = new File(root, "/save_files");
-        myDir.mkdir();
-        if (!(myDir.mkdirs())) {
-            Log.e(LOG_TAG, "Directory not created");
-            return false;
-        }
-        return true;
-    }
-
-    private void saveFileToExternalStorage() {
-        String path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString() +
-                "/save_files";
-        String fileName = mEditTextName.getText().toString();
-        File file = new File(path, fileName);
-        try {
-            file.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void getContentDirectory() {
-        String path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).toString() +
-                "/save_files";
-        Log.d("Files", "Path: " + path);
-        File dir = new File(path);
-        File[] files = dir.listFiles();
-        Log.d("Files", "Size: " + files.length);
-        for (int i = 0; i < files.length; i++) {
-            Log.d("Files", "FileName:" + files[i].getName());
-        }
-        Intent intent = new Intent(MainActivity.this, ViewContentActivity.class);
-        startActivity(intent);
     }
 }
