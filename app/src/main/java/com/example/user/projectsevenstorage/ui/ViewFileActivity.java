@@ -10,6 +10,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.example.user.projectsevenstorage.R;
+import com.example.user.projectsevenstorage.utils.FileManager;
 
 public class ViewFileActivity extends AppCompatActivity {
 

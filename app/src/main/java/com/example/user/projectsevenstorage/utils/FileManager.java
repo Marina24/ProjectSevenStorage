@@ -1,4 +1,4 @@
-package com.example.user.projectsevenstorage.ui;
+package com.example.user.projectsevenstorage.utils;
 
 
 import android.os.Build;
